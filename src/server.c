@@ -57,6 +57,13 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
 
     ///////////////////
     // IMPLEMENT ME! //
+    time_t rawtime;
+    time(&rawtime);
+    sprintf(response,
+            "%s\nDate: %s\nConnection: %s\nContent-Length: %d\nContent-Type: %s\n\n%s",
+            header, asctime(localtime(&rawtime)), "close", content_length, content_type, body);
+    int response_length = strlen(response);
+    printf("response_length = %d\n", response_length);
     ///////////////////
 
     // Send it all!
@@ -79,12 +86,22 @@ void get_d20(int fd)
     
     ///////////////////
     // IMPLEMENT ME! //
+    time_t t;
+    srand((unsigned)time(&t));
+    int random = (rand() % 20) + 1;
     ///////////////////
 
     // Use send_response() to send it back as text/plain data
 
     ///////////////////
     // IMPLEMENT ME! //
+    char response_body[8];
+    sprintf(response_body, "%d", random);
+    send_response(fd,
+                "HTTP/1.1",
+                "text/plain",
+                response_body,
+                strlen(response_body));
     ///////////////////
 }
 
@@ -156,6 +173,21 @@ void handle_http_request(int fd, struct cache *cache)
 
     ///////////////////
     // IMPLEMENT ME! //
+    char request_method[10], request_path[100], request_version[100], request_url[100];
+    sscanf(request,
+            "%s %s %s\nHost: %s\n\n",
+            request_method, request_path, request_version, request_url);
+    if (strcmp(request_method, "GET") == 0) {
+        if (strcmp(request_path, "/d20") == 0) {
+            get_d20(fd);
+        } else {
+            get_file(fd, cache, request_path);
+        }
+    } else if (strcmp(request_path, "POST")) {
+        //TO-DO
+    } else {
+        resp_404(fd);
+    }
     ///////////////////
 
     // Read the first two components of the first line of the request 
@@ -214,6 +246,9 @@ int main(void)
         // newfd is a new socket descriptor for the new connection.
         // listenfd is still listening for new connections.
 
+        // add test
+        //resp_404(newfd);
+        //
         handle_http_request(newfd, cache);
 
         close(newfd);
