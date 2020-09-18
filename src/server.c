@@ -98,8 +98,8 @@ void get_d20(int fd)
     char response_body[8];
     sprintf(response_body, "%d", random);
     send_response(fd,
-                "HTTP/1.1",
-                "text/plain",
+                "HTTP/1.1 200OK",
+                "text/html",
                 response_body,
                 strlen(response_body));
     ///////////////////
@@ -138,6 +138,27 @@ void get_file(int fd, struct cache *cache, char *request_path)
 {
     ///////////////////
     // IMPLEMENT ME! //
+    char filepath[4096];
+    snprintf(filepath, sizeof filepath, "%s%s", SERVER_ROOT, request_path);
+    struct cache_entry *findentry;
+    if ((findentry = cache_get(cache, filepath)) != NULL) {
+        send_response(fd,
+                "HTTP/1.1 200OK",
+                findentry->content_type,
+                findentry->content,
+                findentry->content_length);
+    } else {
+        char *mime_type = mime_type_get(filepath);
+        struct file_data *filedata = file_load(filepath);
+        if (filedata == NULL) {
+            resp_404(fd);
+        } else {
+            send_response(fd,
+                    "HTTP/1.1 404 NOT FOUND", mime_type,
+                    filedata->data, filedata->size);
+            cache_put(cache, filepath, mime_type, filedata->data, filedata->size);
+        }
+    }
     ///////////////////
 }
 
