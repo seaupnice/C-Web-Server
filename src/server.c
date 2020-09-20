@@ -59,8 +59,7 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
     // IMPLEMENT ME! //
     time_t rawtime;
     time(&rawtime);
-    sprintf(response,
-            "%s\nDate: %s\nConnection: %s\nContent-Length: %d\nContent-Type: %s\n\n%s",
+    sprintf(response, "%s\nDate: %sConnection: %s\nContent-Length: %d\nContent-Type: %s\n\n%s",
             header, asctime(localtime(&rawtime)), "close", content_length, content_type, body);
     int response_length = strlen(response);
     printf("response_length = %d\n", response_length);
@@ -139,7 +138,12 @@ void get_file(int fd, struct cache *cache, char *request_path)
     ///////////////////
     // IMPLEMENT ME! //
     char filepath[4096];
-    snprintf(filepath, sizeof filepath, "%s%s", SERVER_ROOT, request_path);
+    if (strcmp(request_path, "/") == 0) {
+        snprintf(filepath, sizeof filepath, "%s/index.html", SERVER_ROOT);
+    } else {
+        snprintf(filepath, sizeof filepath, "%s%s", SERVER_ROOT, request_path);
+    }
+    
     struct cache_entry *findentry;
     if ((findentry = cache_get(cache, filepath)) != NULL) {
         send_response(fd,
@@ -172,7 +176,40 @@ char *find_start_of_body(char *header)
 {
     ///////////////////
     // IMPLEMENT ME! // (Stretch)
+    char *p = header;
+    while (p != NULL || (p+1 != NULL)) {
+        p++;
+    }
+    return p+2;
     ///////////////////
+}
+
+/**
+ * post_save() write the file to disk
+ */
+int post_save(int fd, char *body, char *path) {
+    //open file for write
+    FILE *fp = fopen(path, "w");
+
+    if (fp == NULL) {
+        return -1;
+    }
+
+    // Write in the entire file
+    if (fwrite(body, strlen(body), 1, fp) > 0) {
+        send_response(fd,
+                "HTTP/1.1 200OK",
+                "application/json",
+                "{\"status\":\"ok\"}",
+                strlen("{\"status\":\"ok\"}"));
+    } else {
+        send_response(fd,
+                "HTTP/1.1 200OK",
+                "application/json",
+                "{\"status\":\"bad\"}",
+                strlen("{\"status\":\"bad\"}"));
+    }
+    fclose(fp);
 }
 
 /**
@@ -194,7 +231,7 @@ void handle_http_request(int fd, struct cache *cache)
 
     ///////////////////
     // IMPLEMENT ME! //
-    char request_method[10], request_path[100], request_version[100], request_url[100];
+    char request_method[50], request_path[200], request_version[200], request_url[200];
     sscanf(request,
             "%s %s %s\nHost: %s\n\n",
             request_method, request_path, request_version, request_url);
@@ -206,6 +243,9 @@ void handle_http_request(int fd, struct cache *cache)
         }
     } else if (strcmp(request_path, "POST")) {
         //TO-DO
+        char filepath[4096];
+        snprintf(filepath, sizeof filepath, "%s%s", SERVER_ROOT, request_path);
+        post_save(fd, find_start_of_body(request), request_path);
     } else {
         resp_404(fd);
     }
