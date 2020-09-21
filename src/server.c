@@ -176,11 +176,15 @@ char *find_start_of_body(char *header)
 {
     ///////////////////
     // IMPLEMENT ME! // (Stretch)
-    char *p = header;
-    while (p != NULL || (p+1 != NULL)) {
-        p++;
+    char *p = NULL;
+    if ((p = strstr(header, "\r\n\r\n")) != NULL) {
+        p += 4;
+    } else if ((p = strstr(header, "\r\r")) != NULL) {
+        p += 2;
+    } else if ((p = strstr(header, "\n\n")) != NULL) {
+        p += 2;
     }
-    return p+2;
+    return p;
     ///////////////////
 }
 
@@ -245,7 +249,7 @@ void handle_http_request(int fd, struct cache *cache)
         //TO-DO
         char filepath[4096];
         snprintf(filepath, sizeof filepath, "%s%s", SERVER_ROOT, request_path);
-        post_save(fd, find_start_of_body(request), request_path);
+        post_save(fd, find_start_of_body(request), filepath);
     } else {
         resp_404(fd);
     }
