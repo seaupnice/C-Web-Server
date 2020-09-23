@@ -4,6 +4,7 @@
 *.dSYM
 src/server
 src/data.txt
+src/serverroot/save
 *.o
 src/cache_tests/cache_tests
 src/cache_tests/cache_tests.exe

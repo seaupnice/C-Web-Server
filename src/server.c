@@ -29,6 +29,7 @@
 #include <time.h>
 #include <sys/file.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include "net.h"
 #include "file.h"
 #include "mime.h"
@@ -39,6 +40,7 @@
 #define SERVER_FILES "./serverfiles"
 #define SERVER_ROOT "./serverroot"
 
+struct cache *httpcache;
 /**
  * Send an HTTP response
  *
@@ -204,13 +206,13 @@ int post_save(int fd, char *body, char *path) {
         send_response(fd,
                 "HTTP/1.1 200OK",
                 "application/json",
-                "{\"status\":\"ok\"}",
+                "{\"status\":\"ok\"}\n",
                 strlen("{\"status\":\"ok\"}"));
     } else {
         send_response(fd,
                 "HTTP/1.1 200OK",
                 "application/json",
-                "{\"status\":\"bad\"}",
+                "{\"status\":\"bad\"}\n",
                 strlen("{\"status\":\"bad\"}"));
     }
     fclose(fp);
@@ -267,6 +269,21 @@ void handle_http_request(int fd, struct cache *cache)
 }
 
 /**
+ * thread handle
+ */
+void *thread_handle_http_request(void *arg) {
+    pthread_detach(pthread_self());
+    int fd = *(int *)arg;
+    handle_http_request(fd, httpcache);
+    close(fd);
+    free(arg);
+    pthread_exit(NULL);
+    pthread_t *pid = pthread_self();
+    free(pid);
+}
+
+
+/**
  * Main
  */
 int main(void)
@@ -275,7 +292,7 @@ int main(void)
     struct sockaddr_storage their_addr; // connector's address information
     char s[INET6_ADDRSTRLEN];
 
-    struct cache *cache = cache_create(10, 0);
+    httpcache = cache_create(10, 0);
 
     // Get a listening socket
     int listenfd = get_listener_socket(PORT);
@@ -314,9 +331,17 @@ int main(void)
         // add test
         //resp_404(newfd);
         //
-        handle_http_request(newfd, cache);
+        //handle_http_request(newfd, cache);
 
-        close(newfd);
+        //close(newfd);
+        
+        pthread_t *pid = malloc(sizeof(pthread_t));
+        int *fd = malloc(sizeof(int));
+        memcpy(fd, &newfd, sizeof(int));
+        if(*fd != newfd) {
+            perror("accept fd error\n");
+        }
+        pthread_create(pid, NULL, thread_handle_http_request, fd);
     }
 
     // Unreachable code
