@@ -278,8 +278,7 @@ void *thread_handle_http_request(void *arg) {
     close(fd);
     free(arg);
     pthread_exit(NULL);
-    pthread_t *pid = pthread_self();
-    free(pid);
+    return NULL;
 }
 
 
@@ -334,14 +333,13 @@ int main(void)
         //handle_http_request(newfd, cache);
 
         //close(newfd);
-        
-        pthread_t *pid = malloc(sizeof(pthread_t));
         int *fd = malloc(sizeof(int));
         memcpy(fd, &newfd, sizeof(int));
         if(*fd != newfd) {
             perror("accept fd error\n");
         }
-        pthread_create(pid, NULL, thread_handle_http_request, fd);
+        pthread_t pid;
+        pthread_create(&pid, NULL, thread_handle_http_request, fd);
     }
 
     // Unreachable code
