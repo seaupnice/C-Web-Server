@@ -61,10 +61,16 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
     // IMPLEMENT ME! //
     time_t rawtime;
     time(&rawtime);
-    sprintf(response, "%s\nDate: %sConnection: %s\nContent-Length: %d\nContent-Type: %s\n\n%s",
-            header, asctime(localtime(&rawtime)), "close", content_length, content_type, body);
+    sprintf(response, "%s\nDate: %sConnection: %s\nContent-Length: %d\nContent-Type: %s\n\n",
+            header, asctime(localtime(&rawtime)), "close", content_length, content_type);
     int response_length = strlen(response);
+    memcpy(response + response_length, body, content_length);
+    response_length += content_length;
+    printf("\n-----response:-----\n");
+    printf("%s\n", response);
+    printf("content_length = %d\n", content_length);
     printf("response_length = %d\n", response_length);
+    printf("------end response-----\n\n");
     ///////////////////
 
     // Send it all!
@@ -160,7 +166,7 @@ void get_file(int fd, struct cache *cache, char *request_path)
             resp_404(fd);
         } else {
             send_response(fd,
-                    "HTTP/1.1 404 NOT FOUND", mime_type,
+                    "HTTP/1.1 200OK", mime_type,
                     filedata->data, filedata->size);
             cache_put(cache, filepath, mime_type, filedata->data, filedata->size);
         }
